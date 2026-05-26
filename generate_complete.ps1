@@ -1,0 +1,456 @@
+$jsonPath = "d:\桌面\idiom\idioms.json"
+$templatePath = "d:\桌面\idiom\idiom_master.html"
+$outputPath = "d:\桌面\idiom\idiom_complete.html"
+
+# 读取成语数据
+$idiomsData = Get-Content $jsonPath -Raw -Encoding UTF8
+
+# 读取HTML模板
+$template = Get-Content $templatePath -Raw -Encoding UTF8
+
+# 创建一个更简单但完整的HTML文件，包含内联数据
+$fullHtml = @'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成语记忆大师</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #F8F6F1 0%, #E8E4DD 50%, #F8F6F1 100%);
+            min-height: 100vh; color: #2B2B2B;
+        }
+        .font-song { font-family: 'Source Serif 4', serif; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        header {
+            background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            position: sticky; top: 0; z-index: 100;
+        }
+        header .container { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: bold; color: #C73E3A; }
+        nav { display: flex; gap: 24px; }
+        nav a { color: #2B2B2B; text-decoration: none; cursor: pointer; transition: color 0.3s; }
+        nav a:hover, nav a.active { color: #C73E3A; }
+        main { padding: 32px 0; }
+        .hero { text-align: center; margin-bottom: 32px; }
+        .hero h1 { font-size: 36px; margin-bottom: 8px; }
+        .hero p { color: #666; font-size: 16px; }
+        .search-box { max-width: 600px; margin: 0 auto 32px; }
+        .search-box input {
+            width: 100%; padding: 12px 24px; border: 2px solid rgba(199,62,58,0.2);
+            border-radius: 50px; font-size: 16px; outline: none; transition: border-color 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .search-box input:focus { border-color: #C73E3A; }
+        .categories {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+            margin-bottom: 24px; max-height: 150px; overflow-y: auto;
+        }
+        .category-btn {
+            padding: 8px 16px; border-radius: 50px; border: none; cursor: pointer;
+            transition: all 0.3s; background: white; color: #666; font-size: 14px;
+        }
+        .category-btn:hover { background: rgba(199,62,58,0.1); transform: scale(1.05); }
+        .category-btn.active { background: #C73E3A; color: white; box-shadow: 0 4px 6px rgba(199,62,58,0.3); transform: scale(1.05); }
+        .cards-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px; margin-top: 32px;
+        }
+        .idiom-card {
+            background: white; border-radius: 16px; padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s; cursor: pointer;
+            animation: fadeIn 0.5s ease-out both;
+        }
+        .idiom-card:hover { transform: translateY(-4px); box-shadow: 0 8px 12px rgba(0,0,0,0.15); }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .card-title { font-size: 24px; font-weight: bold; color: #C73E3A; }
+        .card-favorite { font-size: 24px; cursor: pointer; transition: transform 0.3s; }
+        .card-favorite:hover { transform: scale(1.2); }
+        .card-meaning {
+            color: #666; font-size: 14px; margin-bottom: 16px; line-height: 1.6;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .card-footer { display: flex; justify-content: space-between; align-items: center; }
+        .card-category {
+            font-size: 12px; padding: 4px 12px; background: rgba(199,62,58,0.1);
+            color: #C73E3A; border-radius: 50px;
+        }
+        .card-hint { font-size: 12px; color: #999; transition: color 0.3s; }
+        .idiom-card:hover .card-hint { color: #C73E3A; }
+        .pagination {
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            margin-top: 32px; flex-wrap: wrap;
+        }
+        .pagination button {
+            padding: 8px 16px; border: 2px solid #C73E3A; background: white; color: #C73E3A;
+            border-radius: 8px; cursor: pointer; transition: all 0.3s;
+        }
+        .pagination button:hover:not(:disabled) { background: #C73E3A; color: white; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination .active { background: #C73E3A; color: white; }
+        .pagination .info {
+            padding: 8px 16px; background: rgba(199,62,58,0.1); color: #C73E3A; border-radius: 8px;
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+            z-index: 200; padding: 20px;
+        }
+        .modal {
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            border-radius: 24px; max-width: 600px; width: 100%;
+            max-height: 80vh; overflow-y: auto; padding: 32px;
+            animation: bounceIn 0.4s ease-out;
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;
+        }
+        .modal-title { font-size: 36px; font-weight: bold; color: #C73E3A; }
+        .modal-close { font-size: 24px; color: #999; cursor: pointer; transition: color 0.3s; }
+        .modal-close:hover { color: #666; }
+        .modal-category {
+            display: inline-block; padding: 6px 12px; background: rgba(199,62,58,0.1);
+            color: #C73E3A; border-radius: 50px; font-size: 14px; margin-bottom: 16px;
+        }
+        .modal-section { margin-bottom: 24px; }
+        .modal-section h3 { font-size: 20px; font-weight: 600; color: #2B2B2B; margin-bottom: 8px; }
+        .modal-section p { color: #666; line-height: 1.8; }
+        .example-item {
+            background: rgba(255,255,255,0.5); padding: 12px; border-radius: 8px;
+            margin-bottom: 8px; color: #666; line-height: 1.8;
+        }
+        .quick-actions {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 48px 0;
+        }
+        .action-btn {
+            padding: 16px 32px; border-radius: 50px; display: flex; align-items: center; gap: 8px;
+            font-weight: 500; transition: all 0.3s; cursor: pointer; border: none; font-size: 16px;
+        }
+        .action-btn:hover { transform: scale(1.05); }
+        .action-btn.primary {
+            background: #C73E3A; color: white; box-shadow: 0 4px 6px rgba(199,62,58,0.3);
+        }
+        .action-btn.secondary {
+            background: white; color: #C73E3A; border: 2px solid #C73E3A;
+        }
+        .stats-bar {
+            background: white; border-radius: 12px; padding: 16px; margin-bottom: 24px;
+            display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 16px;
+        }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #C73E3A; }
+        .stat-label { font-size: 14px; color: #666; }
+        footer { text-align: center; padding: 32px 0; color: #999; font-size: 14px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <span>📚</span>
+                <span class="font-song">成语记忆大师</span>
+                <span id="idiom-count" style="font-size:14px;color:#C73E3A;margin-left:8px"></span>
+            </div>
+            <nav>
+                <a class="active" onclick="showHome(event)">首页</a>
+                <a onclick="showFavorites(event)">收藏</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div id="home-view">
+                <div class="hero">
+                    <h1 class="font-song">探索成语的魅力</h1>
+                    <p>通过分类浏览、搜索和收藏，系统学习中华文化精髓</p>
+                </div>
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">总成语</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-categories">0</div>
+                        <div class="stat-label">分类</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-favorites">0</div>
+                        <div class="stat-label">收藏</div>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="搜索成语或含义..." oninput="handleSearch()">
+                </div>
+                <div class="categories" id="categories"></div>
+                <div class="cards-grid" id="idioms-grid"></div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+            
+            <div id="favorites-view" class="hidden">
+                <div class="hero">
+                    <h1 class="font-song">我的收藏</h1>
+                    <p>共收藏 <span id="favorites-count">0</span>个成语</p>
+                </div>
+                <div class="cards-grid" id="favorites-grid"></div>
+                <div id="empty-favorites" class="hidden" style="text-align:center;padding:64px 0">
+                    <div style="font-size:64px;margin-bottom:16px">💔</div>
+                    <h3 style="font-size:24px;color:#666;margin-bottom:16px">还没有收藏任何成语</h3>
+                    <p style="color:#999;margin-bottom:32px">快去首页浏览并收藏你喜欢的成语吧！</p>
+                    <button onclick="showHome()" style="padding:16px 32px;background:#C73E3A;color:white;border:none;border-radius:50px;cursor:pointer;transition:all 0.3s">去首页看看</button>
+                </div>
+            </div>
+            
+            <div class="quick-actions" id="quick-actions">
+                <button onclick="showFavorites(event)" class="action-btn secondary">
+                    <span>❤️</span><span>查看收藏</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer><div class="container"><p>成语记忆大师 - 帮助您高效学习中华文化精髓</p></div></footer>
+
+    <div id="modal" class="modal-overlay hidden" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title" class="modal-title">成语</h2>
+                <span class="modal-close" onclick="hideModal()">✕</span>
+            </div>
+            <div id="modal-category" class="modal-category">分类</div>
+            <div class="modal-section">
+                <h3>释义</h3>
+                <p id="modal-meaning">释义内容</p>
+            </div>
+            <div class="modal-section">
+                <h3>例句</h3>
+                <div id="modal-examples"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let idioms = IDIOMS_DATA_PLACEHOLDER;
+        let favorites = JSON.parse(localStorage.getItem('idiom-favorites') || '[]');
+        let currentCategory = '全部';
+        let searchTerm = '';
+        let currentPage = 1;
+        const itemsPerPage = 24;
+        let totalPages = 1;
+        
+        function init() {
+            updateStats();
+            renderCategories();
+            renderIdioms();
+            updateFavoritesCount();
+        }
+        
+        function updateStats() {
+            document.getElementById('idiom-count').textContent = `(${idioms.length}个成语`;
+            document.getElementById('stat-total').textContent = idioms.length;
+            document.getElementById('stat-categories').textContent = new Set(idioms.map(i => i.category)).size;
+            document.getElementById('stat-favorites').textContent = favorites.length;
+        }
+        
+        function renderCategories() {
+            const categories = ['全部', ...new Set(idioms.map(i => i.category))];
+            const container = document.getElementById('categories');
+            container.innerHTML = categories.map(cat => `<button class="category-btn ${cat === currentCategory ? 'active' : ''}" onclick="selectCategory('${cat}')">${cat}</button>`).join('');
+        }
+        
+        function selectCategory(category) {
+            currentCategory = category;
+            currentPage = 1;
+            renderCategories();
+            renderIdioms();
+        }
+        
+        let searchTimeout;
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchTerm = document.getElementById('search-input').value;
+                currentPage = 1;
+                renderIdioms();
+            }, 300);
+        }
+        
+        function getFilteredIdioms() {
+            return idioms.filter(idiom => {
+                const matchesSearch = idiom.idiom.includes(searchTerm) || idiom.meaning.includes(searchTerm);
+                const matchesCategory = currentCategory === '全部' || idiom.category === currentCategory;
+                return matchesSearch && matchesCategory;
+            });
+        }
+        
+        function renderIdioms() {
+            const filtered = getFilteredIdioms();
+            totalPages = Math.ceil(filtered.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageIdioms = filtered.slice(startIndex, endIndex);
+            const container = document.getElementById('idioms-grid');
+            container.innerHTML = pageIdioms.map((idiom, index) => 
+                `<div class="idiom-card" onclick="showIdiomModal('${idiom.idiom}')" style="animation-delay: ${index * 0.03}s">
+                    <div class="card-header">
+                        <h3 class="card-title">${idiom.idiom}</h3>
+                        <span class="card-favorite" onclick="event.stopPropagation(); toggleFavorite('${idiom.idiom}')">${favorites.includes(idiom.idiom) ? '❤️' : '🤍'}</span>
+                    </div>
+                    <p class="card-meaning">${idiom.meaning}</p>
+                    <div class="card-footer">
+                        <span class="card-category">${idiom.category}</span>
+                        <span class="card-hint">点击查看详情 →</span>
+                    </div>
+                </div>`).join('');
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:#999;grid-column:1/-1;padding:48px">没有找到匹配的成语</p>';
+            }
+            renderPagination(filtered.length);
+        }
+        
+        function renderPagination(totalItems) {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            let html = '';
+            html += `<button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>`;
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            if (endPage - startPage < maxButtons - 1) startPage = Math.max(1, endPage - maxButtons + 1);
+            if (startPage > 1) {
+                html += `<button onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) html += '<span style="padding:8px">...</span>';
+            }
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+            }
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += '<span style="padding:8px">...</span>';
+                html += `<button onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            html += `<button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>下一页</button>`;
+            html += `<span class="info">第${currentPage}/${totalPages}页，共${totalItems}个成语</span>`;
+            container.innerHTML = html;
+        }
+        
+        function goToPage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderIdioms();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function showIdiomModal(idiomName) {
+            const idiom = idioms.find(i => i.idiom === idiomName);
+            if (!idiom) return;
+            document.getElementById('modal-title').textContent = idiom.idiom;
+            document.getElementById('modal-category').textContent = idiom.category;
+            document.getElementById('modal-meaning').textContent = idiom.meaning;
+            document.getElementById('modal-examples').innerHTML = idiom.examples.map(ex => `<div class="example-item">${ex}</div>`).join('');
+            document.getElementById('modal').classList.remove('hidden');
+        }
+        
+        function hideModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+        
+        function closeModal(event) {
+            if (event.target.id === 'modal') hideModal();
+        }
+        
+        function toggleFavorite(idiomName) {
+            const idx = favorites.indexOf(idiomName);
+            if (idx > -1) favorites.splice(idx, 1);
+            else favorites.push(idiomName);
+            localStorage.setItem('idiom-favorites', JSON.stringify(favorites));
+            renderIdioms();
+            updateFavoritesCount();
+            updateStats();
+        }
+        
+        function updateFavoritesCount() {
+            document.getElementById('favorites-count').textContent = favorites.length;
+        }
+        
+        function showHome(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            document.getElementById('home-view').classList.remove('hidden');
+            document.getElementById('favorites-view').classList.add('hidden');
+            document.getElementById('quick-actions').classList.remove('hidden');
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+            document.querySelectorAll('nav a')[0].classList.add('active');
+            currentPage = 1;
+            renderIdioms();
+        }
+        
+        function showFavorites(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('favorites-view').classList.remove('hidden');
+            document.getElementById('quick-actions').classList.add('hidden');
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+            document.querySelectorAll('nav a')[1].classList.add('active');
+            renderFavoritesView();
+        }
+        
+        function renderFavoritesView() {
+            const favoriteIdioms = idioms.filter(i => favorites.includes(i.idiom));
+            const container = document.getElementById('favorites-grid');
+            const emptyState = document.getElementById('empty-favorites');
+            if (favoriteIdioms.length === 0) {
+                container.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } else {
+                container.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                container.innerHTML = favoriteIdioms.map(idiom => 
+                    `<div class="idiom-card" onclick="showIdiomModal('${idiom.idiom}')">
+                        <div class="card-header">
+                            <h3 class="card-title">${idiom.idiom}</h3>
+                            <span class="card-favorite" onclick="event.stopPropagation();toggleFavorite('${idiom.idiom}')">❤️</span>
+                        </div>
+                        <p class="card-meaning">${idiom.meaning}</p>
+                        <div class="card-footer">
+                            <span class="card-category">${idiom.category}</span>
+                        </div>
+                    </div>`).join('');
+            }
+        }
+        
+        init();
+    </script>
+</body>
+</html>
+'@
+
+# 替换占位符
+$finalHtml = $fullHtml.Replace('IDIOMS_DATA_PLACEHOLDER', $idiomsData)
+
+# 保存文件
+[System.IO.File]::WriteAllText($outputPath, $finalHtml, [System.Text.Encoding]::UTF8)
+
+Write-Host "✅ 成功创建完整的成语记忆大师网页！" -ForegroundColor Green
+Write-Host "📁 文件位置: $outputPath" -ForegroundColor Cyan
+Write-Host "📊 包含成语数: $($idiomsData.Count)" -ForegroundColor Yellow
+Write-Host "🎯 直接双击打开 $outputPath 即可使用！" -ForegroundColor Green
