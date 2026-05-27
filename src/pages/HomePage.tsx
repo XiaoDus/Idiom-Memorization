@@ -1,13 +1,18 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import IdiomCard from '../components/IdiomCard';
 import CategoryFilter from '../components/CategoryFilter';
 
+const ITEMS_PER_PAGE = 24;
+
 export default function HomePage() {
   const { state } = useApp();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('全部');
   const [selectedIdiom, setSelectedIdiom] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const categories = ['全部', ...new Set(state.idioms.map(i => i.category))];
 
@@ -17,6 +22,80 @@ export default function HomePage() {
     const matchesCategory = selectedCategory === '全部' || idiom.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // 计算分页
+  const totalPages = Math.ceil(filteredIdioms.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const pageIdioms = filteredIdioms.slice(startIndex, endIndex);
+
+  // 统计信息
+  const totalIdioms = state.idioms.length;
+  const categoryCount = new Set(state.idioms.map(i => i.category)).size;
+  const favoritesCount = state.favorites.length;
+
+  // 生成分页按钮
+  const getPaginationButtons = () => {
+    const buttons = [];
+    const maxButtons = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+    
+    if (endPage - startPage < maxButtons - 1) {
+      startPage = Math.max(1, endPage - maxButtons + 1);
+    }
+
+    if (startPage > 1) {
+      buttons.push(
+        <button key="first" onClick={() => setCurrentPage(1)} className="px-4 py-2 border-2 border-zhuhong bg-white text-zhuhong rounded-lg hover:bg-zhuhong hover:text-white transition-colors">
+          1
+        </button>
+      );
+      if (startPage > 2) {
+        buttons.push(<span key="ellipsis1" className="px-2 text-gray-500">...</span>);
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      buttons.push(
+        <button 
+          key={i} 
+          onClick={() => setCurrentPage(i)} 
+          className={`px-4 py-2 border-2 rounded-lg transition-colors ${
+            i === currentPage 
+              ? 'bg-zhuhong text-white border-zhuhong' 
+              : 'border-zhuhong bg-white text-zhuhong hover:bg-zhuhong hover:text-white'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        buttons.push(<span key="ellipsis2" className="px-2 text-gray-500">...</span>);
+      }
+      buttons.push(
+        <button key="last" onClick={() => setCurrentPage(totalPages)} className="px-4 py-2 border-2 border-zhuhong bg-white text-zhuhong rounded-lg hover:bg-zhuhong hover:text-white transition-colors">
+          {totalPages}
+        </button>
+      );
+    }
+
+    return buttons;
+  };
+
+  // 搜索时重置页码
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in">
@@ -29,13 +108,31 @@ export default function HomePage() {
             通过分类浏览、搜索和收藏，系统学习中华文化精髓
           </p>
         </div>
+
+        {/* 统计信息栏 */}
+        <div className="glass rounded-xl p-6 mb-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-zhuhong mb-1">{totalIdioms}</div>
+              <div className="text-sm text-gray-600">总成语</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-zhuhong mb-1">{categoryCount}</div>
+              <div className="text-sm text-gray-600">分类</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-zhuhong mb-1">{favoritesCount}</div>
+              <div className="text-sm text-gray-600">收藏</div>
+            </div>
+          </div>
+        </div>
         
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto mb-6">
           <input
             type="text"
             placeholder="搜索成语或含义..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="w-full px-6 py-3 rounded-full border-2 border-zhuhong/20 focus:border-zhuhong outline-none transition-colors shadow-lg"
           />
         </div>
@@ -44,11 +141,11 @@ export default function HomePage() {
       <CategoryFilter 
         categories={categories}
         selected={selectedCategory}
-        onSelect={setSelectedCategory}
+        onSelect={handleCategorySelect}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-        {filteredIdioms.map((idiom, index) => (
+        {pageIdioms.map((idiom, index) => (
           <IdiomCard
             key={idiom.idiom}
             idiom={idiom}
@@ -63,6 +160,62 @@ export default function HomePage() {
           <p className="text-gray-500 text-lg">没有找到匹配的成语</p>
         </div>
       )}
+
+      {/* 分页 */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-12 flex-wrap">
+          <button 
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
+            disabled={currentPage === 1}
+            className="px-4 py-2 border-2 border-zhuhong rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white text-zhuhong hover:bg-zhuhong hover:text-white"
+          >
+            上一页
+          </button>
+          {getPaginationButtons()}
+          <button 
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} 
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 border-2 border-zhuhong rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white text-zhuhong hover:bg-zhuhong hover:text-white"
+          >
+            下一页
+          </button>
+          <span className="ml-4 px-4 py-2 bg-zhuhong/10 text-zhuhong rounded-lg">
+            第{currentPage}/{totalPages}页，共{filteredIdioms.length}个成语
+          </span>
+        </div>
+      )}
+
+      {/* 快速操作按钮 */}
+      <div className="flex flex-wrap justify-center gap-4 mt-12">
+        <button 
+          onClick={() => navigate('/learn')} 
+          className="px-8 py-4 bg-zhuhong text-white rounded-full hover:bg-red-700 transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+        >
+          <span className="text-xl">🚀</span>
+          <span>开始学习</span>
+        </button>
+        <button 
+          onClick={() => navigate('/quiz')} 
+          className="px-8 py-4 bg-white text-zhuhong border-2 border-zhuhong rounded-full hover:bg-zhuhong/10 transition-all transform hover:scale-105 flex items-center gap-2"
+        >
+          <span className="text-xl">📝</span>
+          <span>参加测验</span>
+        </button>
+        <button 
+          onClick={() => navigate('/fill')} 
+          className="px-8 py-4 bg-white text-zhuhong border-2 border-zhuhong rounded-full hover:bg-zhuhong/10 transition-all transform hover:scale-105 flex items-center gap-2"
+        >
+          <span className="text-xl">📝</span>
+          <span>选择题练习</span>
+        </button>
+        <button 
+          onClick={() => navigate('/favorites')} 
+          className="px-8 py-4 bg-white text-zhuhong border-2 border-zhuhong rounded-full hover:bg-zhuhong/10 transition-all transform hover:scale-105 flex items-center gap-2"
+        >
+          <span className="text-xl">❤️</span>
+          <span>查看收藏</span>
+        </button>
+      </div>
 
       {selectedIdiom && (
         <div 

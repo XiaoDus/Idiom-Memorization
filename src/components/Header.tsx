@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
 
 export default function Header() {
   const location = useLocation();
+  const { state } = useApp();
   
   const isActive = (path: string) => location.pathname === path;
 
@@ -14,6 +16,7 @@ export default function Header() {
             <h1 className="text-2xl font-bold font-song text-zhuhong">
               成语记忆大师
             </h1>
+            <span className="text-sm text-gray-500">({state.idioms.length}个成语)</span>
           </Link>
           
           <nav className="hidden md:flex items-center space-x-6">
@@ -42,20 +45,20 @@ export default function Header() {
               测验
             </Link>
             <Link 
+              to="/fill" 
+              className={`transition-colors ${
+                isActive('/fill') ? 'text-zhuhong font-semibold' : 'text-zhuise hover:text-zhuhong'
+              }`}
+            >
+              选择题
+            </Link>
+            <Link 
               to="/favorites" 
               className={`transition-colors ${
                 isActive('/favorites') ? 'text-zhuhong font-semibold' : 'text-zhuise hover:text-zhuhong'
               }`}
             >
               收藏
-            </Link>
-            <Link 
-              to="/about" 
-              className={`transition-colors ${
-                isActive('/about') ? 'text-zhuhong font-semibold' : 'text-zhuise hover:text-zhuhong'
-              }`}
-            >
-              关于
             </Link>
           </nav>
         </div>

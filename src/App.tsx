@@ -4,6 +4,7 @@ import Header from './components/Header';
 import HomePage from './pages/HomePage';
 import LearningPage from './pages/LearningPage';
 import QuizPage from './pages/QuizPage';
+import FillModePage from './pages/FillModePage';
 import FavoritesPage from './pages/FavoritesPage';
 import AboutPage from './pages/AboutPage';
 
@@ -17,6 +18,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/learn" element={<LearningPage />} />
             <Route path="/quiz" element={<QuizPage />} />
+            <Route path="/fill" element={<FillModePage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/about" element={<AboutPage />} />
           </Routes>

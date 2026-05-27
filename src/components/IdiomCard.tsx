@@ -32,9 +32,12 @@ export default function IdiomCard({ idiom, onClick, style }: IdiomCardProps) {
         </h3>
         <button
           onClick={toggleFavorite}
-          className={`text-2xl transition-transform ${
-            isFavorite ? 'text-red-500 scale-110' : 'text-gray-300 hover:text-red-400'
-          }`}
+          className={`text-2xl transition-transform duration-300 ${
+            isFavorite 
+              ? 'text-red-500 animate-pulse' 
+              : 'text-gray-300 hover:text-red-400'
+          } hover:scale-130`}
+          title={isFavorite ? '点击取消收藏' : '点击添加收藏'}
         >
           {isFavorite ? '❤️' : '🤍'}
         </button>
@@ -48,8 +51,10 @@ export default function IdiomCard({ idiom, onClick, style }: IdiomCardProps) {
         <span className="text-xs px-3 py-1 bg-zhuhong/10 text-zhuhong rounded-full">
           {idiom.category}
         </span>
-        <span className="text-xs text-gray-400 group-hover:text-zhuhong transition-colors">
-          点击查看详情 →
+        <span className={`text-xs transition-colors ${
+          isFavorite ? 'text-zhuhong font-semibold' : 'text-gray-400'
+        } group-hover:text-zhuhong`}>
+          {isFavorite ? '❤️ 已收藏，点击可取消' : '点击查看详情 →'}
         </span>
       </div>
     </div>
