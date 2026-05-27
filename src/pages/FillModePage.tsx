@@ -15,32 +15,38 @@ export default function FillModePage() {
   const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
-    // 随机选择10个成语作为题目
+    generateQuestions();
+  }, [state.idioms]);
+
+  const generateQuestions = () => {
     const shuffled = shuffleArray([...state.idioms]).slice(0, 10);
     const quizQuestions = shuffled.map(idiom => {
-      // 为每个题目生成干扰项（3个其他成语的释义）
-      const otherIdioms = state.idioms.filter(i => i.idiom !== idiom.idiom);
-      const shuffledOthers = shuffleArray(otherIdioms).slice(0, 3);
-      const options = [idiom, ...shuffledOthers];
+      // 优先从同分类中选择干扰项
+      const sameCategory = state.idioms.filter(i => i.category === idiom.category && i.idiom !== idiom.idiom);
+      let wrongOptions = shuffleArray(sameCategory).slice(0, 3);
+      
+      // 如果同分类不足3个，从其他分类补充
+      if (wrongOptions.length < 3) {
+        const others = state.idioms.filter(i => i.category !== idiom.category && i.idiom !== idiom.idiom);
+        const additionalWrong = shuffleArray(others).slice(0, 3 - wrongOptions.length);
+        wrongOptions = [...wrongOptions, ...additionalWrong];
+      }
+      
+      const options = shuffleArray([idiom, ...wrongOptions]);
+      
+      // 随机选择一个例句
+      const exampleIdx = Math.floor(Math.random() * idiom.examples.length);
       
       return {
         idiom,
-        options: shuffleArray(options),
-        correctIndex: shuffleArray(options).findIndex(opt => opt.idiom === idiom.idiom)
+        options,
+        correctIndex: options.findIndex((opt: any) => opt.idiom === idiom.idiom),
+        example: idiom.examples[exampleIdx]
       };
     });
     
-    // 重新计算正确选项索引
-    const questionsWithCorrectIndex = quizQuestions.map(q => ({
-      ...q,
-      options: shuffleArray([q.idiom, ...shuffleArray(q.options.filter(opt => opt.idiom !== q.idiom.idiom)).slice(0, 3)]),
-    })).map(q => ({
-      ...q,
-      correctIndex: q.options.findIndex(opt => opt.idiom === q.idiom.idiom)
-    }));
-    
-    setQuestions(questionsWithCorrectIndex);
-  }, [state.idioms]);
+    setQuestions(quizQuestions);
+  };
 
   const currentQuestion = questions[currentIndex];
   const progressPercentage = ((currentIndex + 1) / (questions.length || 1)) * 100;
@@ -66,22 +72,7 @@ export default function FillModePage() {
   };
 
   const handleRestart = () => {
-    // 重新开始
-    const shuffled = shuffleArray([...state.idioms]).slice(0, 10);
-    const quizQuestions = shuffled.map(idiom => {
-      const otherIdioms = state.idioms.filter(i => i.idiom !== idiom.idiom);
-      const shuffledOthers = shuffleArray(otherIdioms).slice(0, 3);
-      return {
-        idiom,
-        options: shuffleArray([idiom, ...shuffledOthers]),
-        correctIndex: 0 // 稍后重新计算
-      };
-    }).map(q => ({
-      ...q,
-      correctIndex: q.options.findIndex(opt => opt.idiom === q.idiom.idiom)
-    }));
-    
-    setQuestions(quizQuestions);
+    generateQuestions();
     setCurrentIndex(0);
     setSelectedAnswer(null);
     setShowResult(false);
@@ -98,31 +89,19 @@ export default function FillModePage() {
   }
 
   if (completed) {
-    const finalScore = Math.round((score / questions.length) * 100);
-    let emoji = '💪';
-    let message = '继续努力，多练习几次就能掌握更多成语！';
-    
-    if (finalScore >= 90) {
-      emoji = '🏆';
-      message = '太棒了！你对成语的掌握非常出色！';
-    } else if (finalScore >= 70) {
-      emoji = '👍';
-      message = '很不错！继续保持这个学习势头！';
-    }
-    
     return (
       <div className="container mx-auto px-4 py-16 animate-fade-in">
-        <div className="max-w-2xl mx-auto glass rounded-2xl p-12 text-center">
-          <div className="text-6xl mb-6">{emoji}</div>
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="text-6xl mb-6">🎉</div>
           <h2 className="text-3xl font-bold font-song text-zhuise mb-6">
             选择题练习完成！
           </h2>
           
           <div className="mb-8">
             <div className="text-6xl font-bold text-zhuhong mb-4">
-              {score}/{questions.length}
+              <span>{score}</span>/<span>{questions.length}</span>
             </div>
-            <p className="text-gray-600">{message}</p>
+            <p className="text-gray-600">做得很棒！继续加油哦~</p>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -165,25 +144,44 @@ export default function FillModePage() {
           </div>
         </div>
 
-        <div className="glass rounded-2xl p-8 mb-6">
+        <div className="bg-white rounded-2xl p-8 mb-6 shadow-lg">
+          {/* 显示成语名称 */}
           <div className="text-center mb-6">
             <h3 className="text-4xl font-bold font-song text-zhuhong mb-4">
               {currentQuestion?.idiom?.idiom}
             </h3>
           </div>
 
+          {/* 显示例句，其中包含成语名称 */}
+          <div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
+            <p className="text-lg leading-relaxed text-gray-800">
+              请选择"<span className="text-zhuhong font-bold">{currentQuestion?.idiom?.idiom}</span>"所属的分类：
+              <br />
+              <span className="text-zhuhong font-bold text-xl mt-2 inline-block">
+                {currentQuestion?.idiom?.category}
+              </span>
+            </p>
+          </div>
+
+          {/* 显示释义 */}
+          <div className="bg-gradient-to-r from-zhuhong/5 to-zhuhong/10 border-l-4 border-zhuhong rounded-lg p-4 mb-6">
+            <h4 className="text-lg font-semibold text-zhuhong mb-2">📖 释义</h4>
+            <p className="text-gray-700 leading-relaxed">
+              {currentQuestion?.idiom?.meaning}
+            </p>
+          </div>
+
+          {/* 选项 */}
           <div className="space-y-4">
             {currentQuestion?.options.map((option: any, index: number) => {
               let optionClass = 'bg-white hover:bg-zhuhong/10 border-2 border-gray-200';
               
               if (showResult) {
                 if (index === currentQuestion.correctIndex) {
-                  optionClass = 'bg-green-100 border-2 border-green-500 text-green-800';
+                  optionClass = 'bg-green-100 border-2 border-green-500';
                 } else if (index === selectedAnswer && index !== currentQuestion.correctIndex) {
-                  optionClass = 'bg-red-100 border-2 border-red-500 text-red-800';
+                  optionClass = 'bg-red-100 border-2 border-red-500';
                 }
-              } else if (selectedAnswer === index) {
-                optionClass = 'bg-zhuhong/10 border-2 border-zhuhong';
               }
 
               return (
@@ -192,19 +190,25 @@ export default function FillModePage() {
                   onClick={() => handleAnswerSelect(index)}
                   disabled={showResult}
                   className={`w-full p-4 rounded-xl text-left transition-all ${optionClass} ${
-                    !showResult ? 'cursor-pointer hover:shadow-md' : 'cursor-default'
+                    !showResult ? 'cursor-pointer hover:shadow-md' : 'cursor-default opacity-70'
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <span className="font-semibold w-8 h-8 rounded-full bg-zhuhong/10 text-zhuhong flex items-center justify-center flex-shrink-0">
+                    <span className={`font-bold w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      showResult && index === currentQuestion.correctIndex 
+                        ? 'bg-green-500 text-white' 
+                        : showResult && index === selectedAnswer && index !== currentQuestion.correctIndex
+                        ? 'bg-red-500 text-white'
+                        : 'bg-zhuhong/10 text-zhuhong'
+                    }`}>
                       {String.fromCharCode(65 + index)}
                     </span>
-                    <span className="flex-1">{option.meaning}</span>
+                    <span className="flex-1 text-lg">{option.idiom}</span>
                     {showResult && index === currentQuestion.correctIndex && (
-                      <span className="text-green-600 text-xl">✓</span>
+                      <span className="text-green-600 font-bold">✓ 正确</span>
                     )}
                     {showResult && index === selectedAnswer && index !== currentQuestion.correctIndex && (
-                      <span className="text-red-600 text-xl">✗</span>
+                      <span className="text-red-600 font-bold">✗ 错误</span>
                     )}
                   </div>
                 </button>
@@ -212,23 +216,28 @@ export default function FillModePage() {
             })}
           </div>
 
+          {/* 结果和下一题按钮 */}
           {showResult && (
-            <div className="mt-8 p-6 bg-gradient-to-r from-zhuhong/5 to-zhuhong/10 border-l-4 border-zhuhong rounded-lg animate-fade-in">
-              <h4 className="text-lg font-semibold text-zhuhong mb-2">📖 释义</h4>
-              <p className="text-gray-700 leading-relaxed">
-                {currentQuestion?.idiom?.meaning}
-              </p>
-              <div className="mt-4 text-center">
-                <p className={`mb-4 text-lg font-semibold ${
-                  selectedAnswer === currentQuestion?.correctIndex ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {selectedAnswer === currentQuestion?.correctIndex ? '回答正确！🎉' : '回答错误，继续加油！💪'}
+            <div className="mt-8 animate-fade-in">
+              <div className={`mb-4 text-xl font-semibold text-center ${
+                selectedAnswer === currentQuestion?.correctIndex ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {selectedAnswer === currentQuestion?.correctIndex ? '回答正确！🎉' : '回答错误，继续加油！💪'}
+              </div>
+              
+              <div className="p-6 bg-gradient-to-r from-zhuhong/5 to-zhuhong/10 border-l-4 border-zhuhong rounded-lg mb-6">
+                <h4 className="text-lg font-semibold text-zhuhong mb-2">📖 释义</h4>
+                <p className="text-gray-700 leading-relaxed">
+                  {currentQuestion?.idiom?.meaning}
                 </p>
+              </div>
+
+              <div className="text-center">
                 <button
                   onClick={handleNext}
                   className="px-12 py-4 bg-zhuhong text-white rounded-full hover:bg-red-700 transition-all transform hover:scale-105 shadow-lg text-lg"
                 >
-                  {currentIndex < questions.length - 1 ? '下一题' : '查看结果'}
+                  下一题
                 </button>
               </div>
             </div>

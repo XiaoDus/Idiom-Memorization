@@ -141,42 +141,73 @@ export default function LearningPage() {
           </div>
         </div>
 
-        <FlashCard
-          idiom={currentIdiom}
-          isFlipped={isFlipped}
-          onFlip={handleFlip}
-        />
-
-        <div className="flex justify-center gap-4 mt-8">
-          {isFlipped ? (
+        <div className={`rounded-2xl p-8 shadow-xl border-4 border-zhuhong/20 cursor-pointer min-h-[300px] flex flex-col items-center justify-center transition-all duration-300 ${
+            isFlipped ? 'bg-gradient-to-br from-zhuhong to-red-700 text-white' : 'bg-white'
+          }`} onClick={!isFlipped ? handleFlip : undefined}>
+          {!isFlipped ? (
             <>
-              <button
-                onClick={() => handleResponse(true)}
-                className="px-8 py-4 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
-              >
-                <span className="text-xl">✓</span>
-                <span>认识</span>
-              </button>
-              <button
-                onClick={() => handleResponse(false)}
-                className="px-8 py-4 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
-              >
-                <span className="text-xl">✗</span>
-                <span>不认识</span>
-              </button>
+              <div className="text-sm text-zhuhong mb-4">点击翻转查看释义</div>
+              <h3 className="text-5xl font-bold font-song text-zhuise text-center">
+                {currentIdiom.idiom}
+              </h3>
+              <div className="mt-6 text-6xl">👆</div>
             </>
           ) : (
+            <div className="w-full text-center">
+              <h3 className="text-4xl font-bold font-song mb-6">
+                {currentIdiom.idiom}
+              </h3>
+              <div className="bg-white/20 rounded-xl p-4 mb-6">
+                <h4 className="text-lg font-semibold mb-2">释义</h4>
+                <p className="leading-relaxed">{currentIdiom.meaning}</p>
+              </div>
+              <div className="space-y-3">
+                <h4 className="text-lg font-semibold">例句</h4>
+                {currentIdiom.examples.map((example, idx) => (
+                  <p key={idx} className="text-sm bg-white/10 p-3 rounded-lg leading-relaxed">
+                    {example}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {isFlipped ? (
+          <div className="flex justify-center gap-4 mt-8">
+            <button
+              onClick={() => handleResponse(true)}
+              className="px-8 py-4 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+            >
+              <span className="text-xl">✓</span>
+              <span>认识</span>
+            </button>
+            <button
+              onClick={() => handleResponse(false)}
+              className="px-8 py-4 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+            >
+              <span className="text-xl">✗</span>
+              <span>不认识</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex justify-center mt-8">
             <button
               onClick={handleFlip}
               className="px-12 py-4 bg-zhuhong text-white rounded-full hover:bg-red-700 transition-all transform hover:scale-105 shadow-lg text-lg"
             >
               显示释义
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>提示：点击"显示释义"后，根据你的记忆情况选择"认识"或"不认识"</p>
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-2 bg-white text-zhuhong border-2 border-zhuhong rounded-full hover:bg-zhuhong/10 transition-colors"
+          >
+            ← 返回首页
+          </button>
         </div>
       </div>
     </div>

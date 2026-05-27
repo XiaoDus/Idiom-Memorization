@@ -152,7 +152,7 @@ export default function QuizPage() {
           </div>
         </div>
 
-        <div className="glass rounded-2xl p-8 mb-6">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 mb-6 shadow-lg">
           <h3 className="text-2xl font-semibold text-center mb-8">
             成语"<span className="text-zhuhong font-bold">{currentQuestion?.idiom.idiom}</span>"是什么意思？
           </h3>
@@ -213,6 +213,15 @@ export default function QuizPage() {
             </button>
           </div>
         )}
+
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-2 bg-white text-zhuhong border-2 border-zhuhong rounded-full hover:bg-zhuhong/10 transition-colors"
+          >
+            ← 返回首页
+          </button>
+        </div>
       </div>
     </div>
   );
